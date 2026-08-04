@@ -16,6 +16,12 @@ class LinearAttnKernelBackend(Enum):
     TRITON = "triton"
     CUTEDSL = "cutedsl"
     FLASHINFER = "flashinfer"
+    FLASHKDA = "flashkda"
+    CUSTOM = "custom"
+
+    @classmethod
+    def _missing_(cls, value):
+        return cls.CUSTOM
 
     def is_triton(self):
         return self == LinearAttnKernelBackend.TRITON
@@ -26,26 +32,31 @@ class LinearAttnKernelBackend(Enum):
     def is_flashinfer(self):
         return self == LinearAttnKernelBackend.FLASHINFER
 
+    def is_flashkda(self):
+        return self == LinearAttnKernelBackend.FLASHKDA
+
+    def is_custom(self):
+        return self == LinearAttnKernelBackend.CUSTOM
+
 
 LINEAR_ATTN_DECODE_BACKEND: Optional[LinearAttnKernelBackend] = None
 LINEAR_ATTN_PREFILL_BACKEND: Optional[LinearAttnKernelBackend] = None
 
 
-def initialize_linear_attn_config(server_args: ServerArgs):
+def initialize_linear_attn_config(
+    server_args: ServerArgs, prefill_default: Optional[str] = None
+):
     global LINEAR_ATTN_DECODE_BACKEND
     global LINEAR_ATTN_PREFILL_BACKEND
 
     base = server_args.linear_attn_backend
     decode = server_args.linear_attn_decode_backend or base
-    prefill = server_args.linear_attn_prefill_backend or base
+    prefill = server_args.linear_attn_prefill_backend or prefill_default or base
 
     LINEAR_ATTN_DECODE_BACKEND = LinearAttnKernelBackend(decode)
     LINEAR_ATTN_PREFILL_BACKEND = LinearAttnKernelBackend(prefill)
-    rank0_log(
-        f"Linear attention kernel backend: "
-        f"decode={LINEAR_ATTN_DECODE_BACKEND.value}, "
-        f"prefill={LINEAR_ATTN_PREFILL_BACKEND.value}"
-    )
+
+    rank0_log(f"Linear attention kernel backend: decode={decode}, prefill={prefill}")
 
 
 def get_linear_attn_decode_backend() -> LinearAttnKernelBackend:
